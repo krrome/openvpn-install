@@ -5,7 +5,7 @@
 # Copyright (c) 2013 Nyr. Released under the MIT License.
 
 # Modified by checking environment variables OVP_USE_DEFAULTS (set to non-zero to activate) and OVP_CLIENT to set the
-# client name
+# client name. Additionally the public IP can be defined in OVP_PUBLIC_IP env variable.
 
 # Detect Debian users running the script with "sh" instead of bash
 if readlink /proc/$$/exe | grep -q "dash"; then
@@ -127,14 +127,21 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		echo "This server is behind NAT. What is the public IPv4 address or hostname?"
 		# Get public IP and sanitize with grep
 		get_public_ip=$(grep -m 1 -oE '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' <<< "$(wget -T 10 -t 1 -4qO- "http://ip1.dynupdate.no-ip.com/" || curl -m 10 -4Ls "http://ip1.dynupdate.no-ip.com/")")
-		if [[ -z "$OVP_USE_DEFAULTS" ]]; then
-      read -p "Public IPv4 address / hostname [$get_public_ip]: " public_ip
-      # If the checkip service is unavailable and user didn't provide input, ask again
-      until [[ -n "$get_public_ip" || -n "$public_ip" ]]; do
-        echo "Invalid input."
-        read -p "Public IPv4 address / hostname: " public_ip
-      done
+		if [[ -z "$OVP_PUBLIC_IP" ]]; then
+		  # if public IP not defined as a environment variable then
+      if [[ -z "$OVP_USE_DEFAULTS" ]]; then
+        # if don't use defaults then
+        read -p "Public IPv4 address / hostname [$get_public_ip]: " public_ip
+        # If the checkip service is unavailable and user didn't provide input, ask again
+        until [[ -n "$get_public_ip" || -n "$public_ip" ]]; do
+          echo "Invalid input."
+          read -p "Public IPv4 address / hostname: " public_ip
+        done
+      fi
+    else
+      public_ip="$OVP_PUBLIC_IP"
     fi
+    # if the the public IP has not been set yet choose the default
 		[[ -z "$public_ip" ]] && public_ip="$get_public_ip"
 	fi
 	# If system has a single IPv6, it is selected automatically
